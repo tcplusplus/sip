@@ -5,7 +5,7 @@ use rand::rngs::ThreadRng;
 pub enum PersonState {
   Susceptible,
   Infectious,
-  Recovered(bool)   // add boolean dead
+  Recovered(bool)
 }
 
 #[derive(Clone, Debug)]
@@ -14,7 +14,7 @@ pub struct Location {
   pub y: isize
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Person {
   state: PersonState,
   infected_date: isize,
@@ -26,11 +26,24 @@ pub struct Person {
 
 impl Person {
   pub fn new_random(max_x: usize, max_y: usize) -> Person {
+    // TODO use new function DRY
     let mut rng = rand::thread_rng();
     let position = Location {
       x: rng.gen_range(0, max_x as isize),
       y: rng.gen_range(0, max_y as isize)
     };
+    Person {
+      state: PersonState::Susceptible,
+      age: 0,
+      infected_date: 0,
+      home: position.clone(),
+      position,
+      rng
+    }
+  }
+  pub fn new(x: isize, y: isize) -> Person {
+    let rng = rand::thread_rng();
+    let position = Location { x, y };
     Person {
       state: PersonState::Susceptible,
       age: 0,
@@ -87,8 +100,15 @@ impl Person {
     self.position.x = new_x;
     self.position.y = new_y;
   }
-  pub fn sqr_dist(&self, other: &Person) -> isize {
-    return (self.position.x - other.position.x) * (self.position.x - other.position.x) +
-           (self.position.y - other.position.y) * (self.position.y - other.position.y)
+  fn min_diff(x1: isize, x2: isize, width: isize) -> isize {
+    let diff_1 = (x1 - x2).abs();
+    let diff_2 = (diff_1 - width).abs();
+    std::cmp::min(diff_1, diff_2)
+  }
+  // We need the world to know its size because the world is circular
+  pub fn sqr_distance(&self, other: &Person, world_width: usize, world_height: usize) -> isize {
+    let diff_x = Person::min_diff(self.position.x, other.position.x, world_width as isize);
+    let diff_y = Person::min_diff(self.position.y, other.position.y, world_height as isize);
+    diff_x * diff_x + diff_y * diff_y
   }
 }

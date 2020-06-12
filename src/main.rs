@@ -1,16 +1,11 @@
-#[test]
-fn should_fail() {
-    unimplemented!();
-}
-
-mod world;
-use world::world::World;
-use world::person::PersonState;
-use world::virus::Virus;
+mod sir;
+use sir::world::{World, PopulationDistribution};
+use sir::person::PersonState;
+use sir::virus::Virus;
 use pixel_canvas::{Canvas, Color, input::MouseState, RC, image};
 use std::time::{SystemTime};
 
-fn color_pixel(image: &mut image::Image, x: isize, y: isize, state: &world::person::PersonState) {
+fn color_pixel(image: &mut image::Image, x: isize, y: isize, state: &PersonState) {
     let width = image.width() as isize;
     let height = image.height() as isize;
     let size = 1;
@@ -35,7 +30,7 @@ fn color_pixel(image: &mut image::Image, x: isize, y: isize, state: &world::pers
     }
 }
 
-fn plot_graph(image: &mut image::Image, stats: &Vec<(f32, f32, f32)>, line_start: usize, line_end: usize) {
+fn plot_graph(image: &mut image::Image, stats: &[(f32, f32, f32)], line_start: usize, line_end: usize) {
     let width = image.width() as usize;
     for (y, row) in image.chunks_mut(width).enumerate() {
         for (x, pixel) in row.iter_mut().enumerate() {
@@ -44,12 +39,12 @@ fn plot_graph(image: &mut image::Image, stats: &Vec<(f32, f32, f32)>, line_start
                 let mut g = 255;
                 let mut b = 255;
                 if x < stats.len() {
-                    let percent = ((line_end as f32) - (y as f32)) / ((line_end as f32) - (line_start as f32));
-                    if stats[x].0 > percent {
+                    let percent = 1.0 - ((line_end as f32) - (y as f32)) / ((line_end as f32) - (line_start as f32));
+                    if stats[x].1 > percent {
                         b = 0;
-                        r = 0;
-                    } else if stats[x].0 + stats[x].1 > percent {
                         g = 0;
+                    } else if stats[x].0 + stats[x].1 > percent {
+                        r = 0;
                         b = 0;
                     } else {
                         r = 0;
@@ -64,16 +59,12 @@ fn plot_graph(image: &mut image::Image, stats: &Vec<(f32, f32, f32)>, line_start
 }
 
 fn main() {
-    // Configure the window that you want to draw in. You can add an event
-    // handler to build interactive art. Input handlers for common use are
-    // provided.
-
-    let mut world = World::new(1000, 1280, 720);
-    world.config(15);
+    let graph_size = 200;
     let virus = Virus::corona();
-    world.set_virus(&virus);
+    let mut world = World::new(2000, 1920, 1080 - graph_size, virus, PopulationDistribution::Random);
+    world.config(15);
 
-    let canvas = Canvas::new(world.get_width(), world.get_height() + 200)
+    let canvas = Canvas::new(world.get_width(), world.get_height() + graph_size)
         .title("World")
         .state(MouseState::new())
         .input(MouseState::handle_input);
@@ -94,7 +85,7 @@ fn main() {
         image.fill(Color {r: 0, g: 0, b: 0});
 
         let mut count: (usize, usize, usize) = (0, 0, 0);
-        for person in world.people.iter_mut() {
+        for person in world.people_mut().iter_mut() {
             color_pixel(image, person.position.x, person.position.y, &person.get_state());
             match person.get_state() {
                 PersonState::Susceptible => count.0 += 1,
@@ -105,7 +96,7 @@ fn main() {
         let total = (count.0 + count.1 + count.2) as f32;
         stats.push(((count.0 as f32) / total, (count.1 as f32) / total, (count.2 as f32) / total));
         //println!(">> {:?} ", stats);
-        plot_graph(image, &stats, world.get_height(), world.get_height() + 200);
+        plot_graph(image, &stats, world.get_height(), world.get_height() + graph_size);
         world.update();
     });
 }

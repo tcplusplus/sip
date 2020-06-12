@@ -13,7 +13,7 @@ impl Virus {
       distance: 10,
       recovery_time: 100,
       infection_rate: 0.7,
-      mortality_rate: 0.02
+      mortality_rate: 0.05
     }
   }
 }
