@@ -16,6 +16,7 @@ pub struct Location {
 
 #[derive(Debug, Clone)]
 pub struct Person {
+  id: usize,
   state: PersonState,
   infected_date: isize,
   age: isize,
@@ -25,26 +26,18 @@ pub struct Person {
 }
 
 impl Person {
-  pub fn new_random(max_x: usize, max_y: usize) -> Person {
+  pub fn new_random(max_x: usize, max_y: usize, id: usize) -> Person {
     // TODO use new function DRY
     let mut rng = rand::thread_rng();
-    let position = Location {
-      x: rng.gen_range(0, max_x as isize),
-      y: rng.gen_range(0, max_y as isize)
-    };
-    Person {
-      state: PersonState::Susceptible,
-      age: 0,
-      infected_date: 0,
-      home: position.clone(),
-      position,
-      rng
-    }
+    let x = rng.gen_range(0, max_x as isize);
+    let y = rng.gen_range(0, max_y as isize);
+    Person::new(x, y, id)
   }
-  pub fn new(x: isize, y: isize) -> Person {
+  pub fn new(x: isize, y: isize, id: usize) -> Person {
     let rng = rand::thread_rng();
     let position = Location { x, y };
     Person {
+      id,
       state: PersonState::Susceptible,
       age: 0,
       infected_date: 0,
@@ -55,6 +48,9 @@ impl Person {
   }
   pub fn get_state(&self) -> PersonState {
     self.state.clone()
+  }
+  pub fn get_id(&self) -> usize {
+    self.id
   }
   pub fn infect(&mut self, infection_rate: f32) {
     let chance = self.rng.gen_range(0.0, 1.0);
@@ -110,5 +106,25 @@ impl Person {
     let diff_x = Person::min_diff(self.position.x, other.position.x, world_width as isize);
     let diff_y = Person::min_diff(self.position.y, other.position.y, world_height as isize);
     diff_x * diff_x + diff_y * diff_y
+  }
+}
+
+#[test]
+fn dead_people_dont_move() {
+  let rng = rand::thread_rng();
+  let position = Location { x: 10, y: 10 };
+  let mut person = Person {
+    id: 1,
+    state: PersonState::Recovered(true),
+    age: 0,
+    infected_date: 0,
+    home: position.clone(),
+    position,
+    rng
+  };
+  for _ in 0..10 {
+    person.move_random(10, 100, 100);
+    assert_eq!(person.position.x, 10);
+    assert_eq!(person.position.y, 10);
   }
 }
