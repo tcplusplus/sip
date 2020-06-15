@@ -1,4 +1,6 @@
+use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct Virus {
   pub distance: usize,
@@ -7,6 +9,7 @@ pub struct Virus {
   pub mortality_rate: f32   // between 0 and 1
 }
 
+#[wasm_bindgen]
 impl Virus {
   pub fn corona() -> Virus {
     Virus {

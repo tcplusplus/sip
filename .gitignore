@@ -1,2 +1,4 @@
 /target
 tarpaulin-report.html
+.yarn-integrity
+node_modules

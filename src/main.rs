@@ -1,6 +1,6 @@
 use sir::sir::world::{World, PopulationDistribution};
 use sir::sir::virus::Virus;
-use sir::rendering::canvas_render::render_world;
+// use ::rendering::canvas_render::render_world;
 extern crate argparse;
 use argparse::{ArgumentParser, StoreOption, Store};
 
@@ -45,5 +45,5 @@ fn main() {
     let virus = Virus::corona();
     let mut world = World::new(population, width, height, virus, distribution);
     world.config(15);
-    render_world(world, width, height, graph_size);
+    // render_world(world, width, height, graph_size);
 }

@@ -27,7 +27,6 @@ pub struct Person {
 
 impl Person {
   pub fn new_random(max_x: usize, max_y: usize, id: usize) -> Person {
-    // TODO use new function DRY
     let mut rng = rand::thread_rng();
     let x = rng.gen_range(0, max_x as isize);
     let y = rng.gen_range(0, max_y as isize);

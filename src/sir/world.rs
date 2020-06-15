@@ -1,12 +1,31 @@
 use super::person::{ Person, PersonState };
 use super::virus::Virus;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::{{JsCast, JsValue}};
 
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+#[wasm_bindgen]
 #[derive(Copy, Clone, Debug)]
 pub enum PopulationDistribution {
   Random,
   Grid
 }
 
+#[wasm_bindgen]
+pub struct Stats {
+  pub susceptable: f32,
+  pub infected: f32,
+  pub recovered: f32
+}
+
+#[wasm_bindgen]
 pub struct World {
   people: Vec<Person>,
   width: usize,
@@ -15,11 +34,12 @@ pub struct World {
   virus: Virus
 }
 
+#[wasm_bindgen]
 impl World {
   /// Constructs a new World, the basic element in which we can put people and virussen.
   pub fn new(population: usize, width: usize, height: usize, virus: Virus, distribution: PopulationDistribution) -> World {
     let mut people: Vec<Person> = Vec::new();
-    for index in 1..population+1 {
+    for index in 0..population {
       match distribution {
         PopulationDistribution::Random => people.push(Person::new_random(width, height, index as usize)),
         PopulationDistribution::Grid => {
@@ -51,6 +71,64 @@ impl World {
   pub fn get_height(&self) -> usize {
     self.height
   }
+  pub fn update(&mut self) {
+    for person in self.people.iter_mut() {
+      person.move_random(self.move_speed, self.width, self.height);
+      person.update_age(self.virus.recovery_time, self.virus.mortality_rate);
+    }
+    let max_dist = self.virus.distance * self.virus.distance;
+    self.infect_closeby(max_dist);
+  }
+  pub fn get_stats(&self) -> Stats {
+    let mut count: (usize, usize, usize) = (0, 0, 0);
+    for person in self.people.iter() {
+        match person.get_state() {
+            PersonState::Susceptible => count.0 += 1,
+            PersonState::Infectious => count.1 += 1,
+            PersonState::Recovered(_dead) => count.2 += 1
+        }
+    };
+    let total = (count.0 + count.1 + count.2) as f32;
+    Stats {
+      susceptable: count.0 as f32 / total,
+      infected: count.1 as f32 / total,
+      recovered: count.2 as f32 / total
+    }
+  }
+  pub fn render(&self, canvas_id: &str) {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document.get_element_by_id(canvas_id).unwrap();
+    let canvas: web_sys::HtmlCanvasElement = canvas
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .unwrap();
+
+    let context = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
+    let red = "#ff0000";
+    let green = "#00ff00";
+    let blue = "#0000ff";
+    let white = "#ffffff";
+    let black = "#000000";
+    context.set_fill_style(&JsValue::from_str(black));
+    context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+    for person in self.people.iter() {
+      match person.get_state() {
+          PersonState::Susceptible => context.set_fill_style(&JsValue::from_str(green)),
+          PersonState::Infectious => context.set_fill_style(&JsValue::from_str(red)),
+          PersonState::Recovered(false) => context.set_fill_style(&JsValue::from_str(blue)),
+          PersonState::Recovered(true) => context.set_fill_style(&JsValue::from_str(white))
+      }
+      context.fill_rect(person.position.x as f64, person.position.y as f64, 3.0, 3.0);
+    };
+  }
+}
+
+impl World {
   pub fn people_mut(&mut self) -> &mut Vec<Person> {
     &mut self.people
   }
@@ -78,14 +156,6 @@ impl World {
         person.infect(self.virus.infection_rate)
       }
     }
-  }
-  pub fn update(&mut self) {
-    for person in self.people.iter_mut() {
-      person.move_random(self.move_speed, self.width, self.height);
-      person.update_age(self.virus.recovery_time, self.virus.mortality_rate);
-    }
-    let max_dist = self.virus.distance * self.virus.distance;
-    self.infect_closeby(max_dist);
   }
 }
 
