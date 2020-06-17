@@ -123,7 +123,7 @@ impl World {
           PersonState::Recovered(false) => context.set_fill_style(&JsValue::from_str(blue)),
           PersonState::Recovered(true) => context.set_fill_style(&JsValue::from_str(white))
       }
-      context.fill_rect(person.position.x as f64, person.position.y as f64, 3.0, 3.0);
+      context.fill_rect((person.position.x-1) as f64, (person.position.y-1) as f64, 3.0, 3.0);
     };
   }
 }

@@ -2,7 +2,7 @@
 // example.
 // import('./pkg/sir').catch(console.error);
 // import * as sir from "./pkg/sir";
-import { Virus, World, PopulationDistribution, Stats } from './pkg/sir';
+import { Virus, World, PopulationDistribution, Stats } from './rust/pkg/sir';
 
 const virus = Virus.corona();
 console.log(virus)
