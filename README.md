@@ -4,6 +4,8 @@ I am making this test project to learn to work with Rust and Web Assembly.
 More information of this model can be found on
 [Wikipedia](https://en.wikipedia.org/wiki/Compartmental_models_in_epidemiology#The_SIR_model)
 
+Click [here](https://tcplusplus.github.io/sip/dist/) for a demo of the output result.
+
 # Install Rust
 
 Checkout this page to install Rust:
