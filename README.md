@@ -1,17 +1,13 @@
 # SIR Simulator
 
 I am making this test project to learn to work with Rust and Web Assembly.
-More information of this model can be found here:
-```
-https://en.wikipedia.org/wiki/Compartmental_models_in_epidemiology#The_SIR_model
-```
+More information of this model can be found on
+[Wikipedia](https://en.wikipedia.org/wiki/Compartmental_models_in_epidemiology#The_SIR_model)
 
 # Install Rust
 
 Checkout this page to install Rust:
-```
-https://www.rust-lang.org/tools/install
-```
+[https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 You should now have the rust compiler installed.
 The rust project is located in the `rust` directory.
@@ -43,9 +39,7 @@ This generates the file `tarpaulin-report.html` in the root folder.
 # Install Rust to  WASM compiler
 Wasm-pack the the wasm compiler for rust and can be installed from.
 
-```
-https://rustwasm.github.io/wasm-pack/installer/
-```
+(https://rustwasm.github.io/wasm-pack/installer/)[https://rustwasm.github.io/wasm-pack/installer/]
 
 Compile the rust package by running:
 
@@ -57,7 +51,7 @@ This will generate the wasm and typescript files in the `pkg` folder.
 
 # Use wasm in you webpage
 
-The demo webpage is located in the `web` folder.
+The demo webpage is located in the root folder.
 Go into the folder and run:
 ```
 yarn install
