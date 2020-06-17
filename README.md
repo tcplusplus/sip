@@ -41,7 +41,7 @@ This generates the file `tarpaulin-report.html` in the root folder.
 # Install Rust to  WASM compiler
 Wasm-pack the the wasm compiler for rust and can be installed from.
 
-(https://rustwasm.github.io/wasm-pack/installer/)[https://rustwasm.github.io/wasm-pack/installer/]
+[https://rustwasm.github.io/wasm-pack/installer/](https://rustwasm.github.io/wasm-pack/installer/)
 
 Compile the rust package by running:
 
