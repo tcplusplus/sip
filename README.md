@@ -1,3 +1,4 @@
+![Rust Build](https://github.com/tcplusplus/sip/workflows/Rust%20Build/badge.svg)
 ![Rust Testing](https://github.com/tcplusplus/sip/workflows/Rust%20Testing/badge.svg)
 
 
