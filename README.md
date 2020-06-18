@@ -1,3 +1,7 @@
+![Rust Testing](https://github.com/tcplusplus/sip/workflows/Rust%20Testing/badge.svg)
+
+
+
 # SIR Simulator
 
 I am making this test project to learn to work with Rust and Web Assembly.
