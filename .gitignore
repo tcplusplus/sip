@@ -1,4 +1,4 @@
-rust/target
-rust/tarpaulin-report.html
+src/rust/target
+src/rust/tarpaulin-report.html
 .yarn-integrity
 node_modules
