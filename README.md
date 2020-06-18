@@ -12,7 +12,7 @@ Checkout this page to install Rust:
 [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 You should now have the rust compiler installed.
-The rust project is located in the `rust` directory.
+The rust project is located in the `src/rust` directory.
 You can test it out by running
 ```
 cargo build

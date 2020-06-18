@@ -1,0 +1,1 @@
+{"version":3,"sources":["webpack:///./src/rust/pkg/sir.js"],"names":["wasm"],"mappings":"gHAAA,y+EAEAA","file":"js/chunk-2d22234c.09c85f50.js","sourcesContent":["import * as wasm from \"./sir_bg.wasm\";\nexport * from \"./sir_bg.js\";\nwasm.__wbindgen_start();\n"],"sourceRoot":""}

@@ -1,8 +1,8 @@
-use sir::sir::world::{World, PopulationDistribution};
 use sir::sir::virus::Virus;
+use sir::sir::world::{PopulationDistribution, World};
 // use ::rendering::canvas_render::render_world;
 extern crate argparse;
-use argparse::{ArgumentParser, StoreOption, Store};
+use argparse::{ArgumentParser, Store, StoreOption};
 
 fn main() {
     let mut request_width: Option<usize> = None;
@@ -17,14 +17,26 @@ fn main() {
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("SIP Virus simulator");
-        ap.refer(&mut request_width)
-          .add_option(&["-w", "--width"], StoreOption, "Width of the world in pixels (default is 1920)");
-        ap.refer(&mut request_height)
-          .add_option(&["-h", "--height"], StoreOption, "Height of the world in pixels (default is 880)");
-        ap.refer(&mut request_population)
-           .add_option(&["-p", "--population"], StoreOption, "Number of people in the world (default is 1000)");
-        ap.refer(&mut population_distribution)
-           .add_option(&["-d", "--distribution"], Store, "Distribution of people in the world (random or grid)");
+        ap.refer(&mut request_width).add_option(
+            &["-w", "--width"],
+            StoreOption,
+            "Width of the world in pixels (default is 1920)",
+        );
+        ap.refer(&mut request_height).add_option(
+            &["-h", "--height"],
+            StoreOption,
+            "Height of the world in pixels (default is 880)",
+        );
+        ap.refer(&mut request_population).add_option(
+            &["-p", "--population"],
+            StoreOption,
+            "Number of people in the world (default is 1000)",
+        );
+        ap.refer(&mut population_distribution).add_option(
+            &["-d", "--distribution"],
+            Store,
+            "Distribution of people in the world (random or grid)",
+        );
         ap.parse_args_or_exit();
     }
     if let Some(value) = request_width {
