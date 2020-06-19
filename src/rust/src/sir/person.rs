@@ -109,22 +109,27 @@ impl Person {
     }
 }
 
-#[test]
-fn dead_people_dont_move() {
-    let rng = rand::thread_rng();
-    let position = Location { x: 10, y: 10 };
-    let mut person = Person {
-        id: 1,
-        state: PersonState::Recovered(true),
-        age: 0,
-        infected_date: 0,
-        home: position.clone(),
-        position,
-        rng,
-    };
-    for _ in 0..10 {
-        person.move_random(10, 100, 100);
-        assert_eq!(person.position.x, 10);
-        assert_eq!(person.position.y, 10);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dead_people_dont_move() {
+        let rng = rand::thread_rng();
+        let position = Location { x: 10, y: 10 };
+        let mut person = Person {
+            id: 1,
+            state: PersonState::Recovered(true),
+            age: 0,
+            infected_date: 0,
+            home: position.clone(),
+            position,
+            rng,
+        };
+        for _ in 0..10 {
+            person.move_random(10, 100, 100);
+            assert_eq!(person.position.x, 10);
+            assert_eq!(person.position.y, 10);
+        }
     }
 }

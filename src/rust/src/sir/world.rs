@@ -74,9 +74,27 @@ impl World {
     pub fn config(&mut self, move_speed: usize) {
         self.move_speed = move_speed;
     }
+    /// # Returns the width of the world
+    ///
+    /// ```
+    /// # use sir::sir::world::{PopulationDistribution, World};
+    /// # use sir::sir::virus::Virus;
+    /// let virus = Virus::corona();
+    /// let world = World::new(1, 128, 256, virus, PopulationDistribution::Random);
+    /// assert_eq!(world.get_width(), 128);
+    /// ```
     pub fn get_width(&self) -> usize {
         self.width
     }
+    /// # Returns the height of the world
+    ///
+    /// ```
+    /// # use sir::sir::world::{PopulationDistribution, World};
+    /// # use sir::sir::virus::Virus;
+    /// let virus = Virus::corona();
+    /// let world = World::new(1, 128, 256, virus, PopulationDistribution::Grid);
+    /// assert_eq!(world.get_height(), 256);
+    /// ```
     pub fn get_height(&self) -> usize {
         self.height
     }
@@ -179,43 +197,26 @@ impl World {
     }
 }
 
-#[test]
-fn update_move_speed() {
-    let virus = Virus::corona();
-    let mut world = World::new(1, 100, 100, virus, PopulationDistribution::Random);
-    world.config(15);
-    let mut person = world.people[0].clone();
-    let mut max_move = 0;
-    for _ in 1..1000 {
-        world.update();
-        let dist = person.sqr_distance(&world.people[0], 100, 100);
-        if dist > max_move {
-            max_move = dist;
-        }
-        person = world.people[0].clone();
-    }
-    // sqr_distance of 15 = (15^2 + 15^2)
-    assert_eq!(2 * 15 * 15, max_move);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn infect_closeby_users() {
-    // We make a grid with 1 user infected, next step should be 5 -> 13 -> 25
-    let mut virus = Virus::corona();
-    // each step, infect all neighbours
-    virus.distance = 12;
-    let expected_infected = [1, 5, 13, 25];
-    virus.infection_rate = 1.0;
-    let mut world = World::new(100, 100, 100, virus, PopulationDistribution::Grid);
-    world.config(0);
-    for index in 0..4 {
-        let mut count = 0;
-        for person in world.people_mut().iter() {
-            if person.get_state() == PersonState::Infectious {
-                count += 1;
+    #[test]
+    fn update_move_speed() {
+        let virus = Virus::corona();
+        let mut world = World::new(1, 100, 100, virus, PopulationDistribution::Random);
+        world.config(15);
+        let mut person = world.people[0].clone();
+        let mut max_move = 0;
+        for _ in 1..10000 {
+            world.update();
+            let dist = person.sqr_distance(&world.people[0], 100, 100);
+            if dist > max_move {
+                max_move = dist;
             }
+            person = world.people[0].clone();
         }
-        assert_eq!(expected_infected[index], count);
-        world.update();
+        // sqr_distance of 15 = (15^2 + 15^2)
+        assert_eq!(2 * 15 * 15, max_move);
     }
 }

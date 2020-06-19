@@ -71,9 +71,9 @@ export default Vue.extend({
       this.world.update();
       this.world.render('canvas');
       const stats = this.world.get_stats();
-      this.data.datasets[0].data.push(stats.susceptable);
-      this.data.datasets[1].data.push(stats.infected);
-      this.data.datasets[2].data.push(stats.recovered);
+      this.data.datasets[0].data.push(stats.susceptable * 100);
+      this.data.datasets[1].data.push(stats.infected * 100);
+      this.data.datasets[2].data.push(stats.recovered * 100);
       this.chart.update();
       //
       setTimeout(this.update, 1);
