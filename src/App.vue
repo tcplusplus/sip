@@ -1,5 +1,7 @@
 <template>
   <div id="app">
+    SIP Simulator
+    {{ $router.currentRoute }}
     <router-view />
   </div>
 </template>
