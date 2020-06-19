@@ -14,6 +14,11 @@ const routes: RouteConfig[] = [
     name: 'Simulator',
     component: () => import(/* webpackChunkName: "home" */ '../views/Simulator.vue'),
   },
+  {
+    path: '/sip/dist',
+    name: 'Simulator',
+    component: () => import(/* webpackChunkName: "home" */ '../views/Simulator.vue'),
+  },
 ];
 
 const router = new VueRouter({
