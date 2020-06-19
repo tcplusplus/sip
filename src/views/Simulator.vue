@@ -1,13 +1,17 @@
 <template>
   <div class="home">
-    <router-link to="/simulator">Go to Simulator</router-link>
+    <World />
   </div>
 </template>
 
 <script lang="ts">
 import Vue from 'vue';
+import World from '@/components/World.vue';
 
 export default Vue.extend({
-  name: 'Home',
+  name: 'Simulator',
+  components: {
+    World,
+  },
 });
 </script>

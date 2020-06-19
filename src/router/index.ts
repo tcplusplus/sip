@@ -9,6 +9,11 @@ const routes: RouteConfig[] = [
     name: 'Home',
     component: () => import(/* webpackChunkName: "home" */ '../views/Home.vue'),
   },
+  {
+    path: '/simulator',
+    name: 'Simulator',
+    component: () => import(/* webpackChunkName: "home" */ '../views/Simulator.vue'),
+  },
 ];
 
 const router = new VueRouter({
