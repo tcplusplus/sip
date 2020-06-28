@@ -1,5 +1,8 @@
 use super::person::{Person, PersonState};
 use super::virus::Virus;
+use super::population::Population;
+use std::iter::Flatten;
+use std::slice::Iter;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -27,51 +30,61 @@ pub struct Stats {
 
 #[wasm_bindgen]
 pub struct World {
-    people: Vec<Person>,
-    width: usize,
-    height: usize,
-    move_speed: usize,
-    virus: Virus,
+    width: f32,
+    height: f32,
+    move_speed: f32,
+    population: Population
 }
 
 #[wasm_bindgen]
 impl World {
     /// Constructs a new World, the basic element in which we can put people and virussen.
     pub fn new(
-        population: usize,
-        width: usize,
-        height: usize,
+        population_size: usize,
+        width: f32,
+        height: f32,
         virus: Virus,
         distribution: PopulationDistribution,
     ) -> World {
-        let mut people: Vec<Person> = Vec::new();
-        for index in 0..population {
-            match distribution {
+        let max_dist = virus.distance;
+        let mut num_grid_width: usize = ((width as f32) / max_dist).floor() as usize;
+        let mut num_grid_height: usize = ((height as f32) / max_dist).floor() as usize;
+        if num_grid_width > 1000 {
+            num_grid_width = 1000;
+        }
+        if num_grid_height > 1000 {
+            num_grid_height = 1000;
+        }
+        let mut population = Population::new(width as f32, height as f32, num_grid_width, num_grid_height);
+        for index in 0..population_size {
+            let mut person = match distribution {
                 PopulationDistribution::Random => {
-                    people.push(Person::new_random(width, height, index as usize))
+                    Person::new_random(width, height, index as usize)
                 }
                 PopulationDistribution::Grid => {
-                    let population = population as f32;
+                    let population = population_size as f32;
                     let grid_width = (population).sqrt().ceil();
                     let grid_height = (population / grid_width).floor();
                     let x = index % (grid_width as usize) * ((width as f32 / grid_width) as usize);
                     let y =
                         index / (grid_width as usize) * ((height as f32 / grid_height) as usize);
-                    people.push(Person::new(x as isize, y as isize, index as usize));
+                    Person::new(x as f32, y as f32, index as usize)
                 }
+            };
+            if index == 0 {
+                person.infect(virus.clone());
             }
+            population.add(person);
         }
-        people[0].infect(1.0);
 
         World {
-            people,
+            population,
             width,
             height,
-            move_speed: 5,
-            virus,
+            move_speed: 5.0
         }
     }
-    pub fn config(&mut self, move_speed: usize) {
+    pub fn config(&mut self, move_speed: f32) {
         self.move_speed = move_speed;
     }
     /// # Returns the width of the world
@@ -80,10 +93,10 @@ impl World {
     /// # use sir::sir::world::{PopulationDistribution, World};
     /// # use sir::sir::virus::Virus;
     /// let virus = Virus::corona();
-    /// let world = World::new(1, 128, 256, virus, PopulationDistribution::Random);
-    /// assert_eq!(world.get_width(), 128);
+    /// let world = World::new(1, 128.0, 256.0, virus, PopulationDistribution::Random);
+    /// assert_eq!(world.get_width(), 128.0);
     /// ```
-    pub fn get_width(&self) -> usize {
+    pub fn get_width(&self) -> f32 {
         self.width
     }
     /// # Returns the height of the world
@@ -92,26 +105,22 @@ impl World {
     /// # use sir::sir::world::{PopulationDistribution, World};
     /// # use sir::sir::virus::Virus;
     /// let virus = Virus::corona();
-    /// let world = World::new(1, 128, 256, virus, PopulationDistribution::Grid);
-    /// assert_eq!(world.get_height(), 256);
+    /// let world = World::new(1, 128.0, 256.0, virus, PopulationDistribution::Grid);
+    /// assert_eq!(world.get_height(), 256.0);
     /// ```
-    pub fn get_height(&self) -> usize {
+    pub fn get_height(&self) -> f32 {
         self.height
     }
     pub fn update(&mut self) {
-        for person in self.people.iter_mut() {
-            person.move_random(self.move_speed, self.width, self.height);
-            person.update_age(self.virus.recovery_time, self.virus.mortality_rate);
-        }
-        let max_dist = self.virus.distance * self.virus.distance;
-        self.infect_closeby(max_dist);
+        self.population.update_positions(self.move_speed);
+        self.population.infect_closeby();
     }
     pub fn get_stats(&self) -> Stats {
         let mut count: (usize, usize, usize) = (0, 0, 0);
-        for person in self.people.iter() {
+        for person in self.population.iter() {
             match person.get_state() {
                 PersonState::Susceptible => count.0 += 1,
-                PersonState::Infectious => count.1 += 1,
+                PersonState::Infectious(_virus) => count.1 += 1,
                 PersonState::Recovered(_dead) => count.2 += 1,
             }
         }
@@ -143,59 +152,29 @@ impl World {
         let black = "#000000";
         context.set_fill_style(&JsValue::from_str(black));
         context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
-        for person in self.people.iter() {
+        for person in self.population.iter() {
             match person.get_state() {
                 PersonState::Susceptible => context.set_fill_style(&JsValue::from_str(green)),
-                PersonState::Infectious => context.set_fill_style(&JsValue::from_str(red)),
+                PersonState::Infectious(_virus) => context.set_fill_style(&JsValue::from_str(red)),
                 PersonState::Recovered(false) => context.set_fill_style(&JsValue::from_str(blue)),
                 PersonState::Recovered(true) => context.set_fill_style(&JsValue::from_str(white)),
             }
             context.fill_rect(
-                (person.position.x - 1) as f64,
-                (person.position.y - 1) as f64,
-                3.0,
-                3.0,
+                (person.position.x - 1.0) as f64,
+                (person.position.y - 1.0) as f64,
+                2.0,
+                2.0,
             );
         }
     }
 }
 
 impl World {
-    pub fn people_mut(&mut self) -> &mut Vec<Person> {
-        &mut self.people
-    }
-    fn infect_closeby(&mut self, max_dist: usize) {
-        let max_dist: isize = max_dist as isize;
-        // warning !! max number
-        let mut to_infect = [false; 1_000_000];
-        for i in 0..self.people.len() {
-            for j in i + 1..self.people.len() {
-                if self.people[i].get_state() == PersonState::Susceptible
-                    && self.people[j].get_state() == PersonState::Infectious
-                {
-                    let dist =
-                        self.people[i].sqr_distance(&self.people[j], self.width, self.height);
-                    if dist < max_dist {
-                        to_infect[self.people[i].get_id()] = true;
-                    }
-                } else if self.people[j].get_state() == PersonState::Susceptible
-                    && self.people[i].get_state() == PersonState::Infectious
-                {
-                    let dist =
-                        self.people[i].sqr_distance(&self.people[j], self.width, self.height);
-                    if dist < max_dist {
-                        to_infect[self.people[j].get_id()] = true;
-                    }
-                }
-            }
-        }
-        for person in self.people.iter_mut() {
-            if to_infect[person.get_id()] {
-                person.infect(self.virus.infection_rate)
-            }
-        }
+    pub fn people(&self) -> std::iter::Flatten<Flatten<Iter<'_, Vec<Vec<Person>>>>> {
+        self.population.iter()
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -204,19 +183,24 @@ mod tests {
     #[test]
     fn update_move_speed() {
         let virus = Virus::corona();
-        let mut world = World::new(1, 100, 100, virus, PopulationDistribution::Random);
-        world.config(15);
-        let mut person = world.people[0].clone();
-        let mut max_move = 0;
+        let mut world = World::new(1, 100.0, 100.0, virus, PopulationDistribution::Random);
+        world.config(15.0);
+        println!("Hier");
+        let mut person = world.population.iter().next().unwrap().clone();
+        let mut max_move = 0.0;
         for _ in 1..10000 {
+            println!("before update");
             world.update();
-            let dist = person.sqr_distance(&world.people[0], 100, 100);
+            println!("after update");
+            let dist = person.sqr_distance(&world.population.iter().next().unwrap(), 100.0, 100.0);
+            println!("dist {}", dist);
             if dist > max_move {
                 max_move = dist;
             }
-            person = world.people[0].clone();
+            person = world.population.iter().next().unwrap().clone();
         }
-        // sqr_distance of 15 = (15^2 + 15^2)
-        assert_eq!(2 * 15 * 15, max_move);
+        // There is a random factor in here
+        println!("Maximum max distance is {}", max_move);
+        assert!(max_move < 450.0 && max_move > 400.0);
     }
 }

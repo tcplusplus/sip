@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <canvas id="canvas" width="1280" height="720" />
+    <canvas id="canvas" width="1280" height="720" /> {{ fps }} fps
     <canvas ref="chart" width="1280" height="200"></canvas>
   </div>
 </template>
@@ -17,6 +17,7 @@ export default Vue.extend({
     data: {} as any,
     options: {} as any,
     chart: null as null | Chart,
+    fps: 12,
   }),
   mounted() {
     const virus = Virus.corona();
@@ -68,6 +69,7 @@ export default Vue.extend({
       if (this.world === null || this.chart === null) {
         return;
       }
+      const now = (new Date()).getTime();
       this.world.update();
       this.world.render('canvas');
       const stats = this.world.get_stats();
@@ -75,8 +77,10 @@ export default Vue.extend({
       this.data.datasets[1].data.push(stats.infected * 100);
       this.data.datasets[2].data.push(stats.recovered * 100);
       this.chart.update();
+      const after = (new Date()).getTime();
+      this.fps = Math.floor(1000 / (after - now));
       //
-      setTimeout(this.update, 1);
+      setTimeout(this.update, 0);
     },
   },
 });

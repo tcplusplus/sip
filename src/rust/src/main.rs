@@ -55,7 +55,7 @@ fn main() {
         distribution = PopulationDistribution::Grid;
     }
     let virus = Virus::corona();
-    let mut world = World::new(population, width, height, virus, distribution);
-    world.config(15);
+    let mut world = World::new(population, width as f32, height as f32, virus, distribution);
+    world.config(15.0);
     // render_world(world, width, height, graph_size);
 }

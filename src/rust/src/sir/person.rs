@@ -1,38 +1,39 @@
+use super::virus::Virus;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum PersonState {
     Susceptible,
-    Infectious,
+    Infectious(Virus),
     Recovered(bool),
 }
 
 #[derive(Clone, Debug)]
 pub struct Location {
-    pub x: isize,
-    pub y: isize,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Debug, Clone)]
 pub struct Person {
     id: usize,
     state: PersonState,
-    infected_date: isize,
-    age: isize,
+    infected_date: usize,
+    pub age: usize,
     pub position: Location,
     home: Location,
     rng: ThreadRng,
 }
 
 impl Person {
-    pub fn new_random(max_x: usize, max_y: usize, id: usize) -> Person {
+    pub fn new_random(max_x: f32, max_y: f32, id: usize) -> Person {
         let mut rng = rand::thread_rng();
-        let x = rng.gen_range(0, max_x as isize);
-        let y = rng.gen_range(0, max_y as isize);
+        let x = rng.gen_range(0.0, max_x as f32);
+        let y = rng.gen_range(0.0, max_y as f32);
         Person::new(x, y, id)
     }
-    pub fn new(x: isize, y: isize, id: usize) -> Person {
+    pub fn new(x: f32, y: f32, id: usize) -> Person {
         let rng = rand::thread_rng();
         let position = Location { x, y };
         Person {
@@ -51,60 +52,61 @@ impl Person {
     pub fn get_id(&self) -> usize {
         self.id
     }
-    pub fn infect(&mut self, infection_rate: f32) {
-        let chance = self.rng.gen_range(0.0, 1.0);
-        if chance <= infection_rate {
-            self.state = PersonState::Infectious;
-            self.infected_date = self.age;
-        }
-    }
-    pub fn update_age(&mut self, max_infected_age: usize, mortality_rate: f32) {
-        self.age += 1;
-        let max_infected_age: isize = max_infected_age as isize;
-        if self.state == PersonState::Infectious && self.infected_date < self.age - max_infected_age
-        {
+    pub fn infect(&mut self, virus: Virus) {
+        if self.state == PersonState::Susceptible {
             let chance = self.rng.gen_range(0.0, 1.0);
-            self.state = PersonState::Recovered(chance < mortality_rate);
-        }
-    }
-    pub fn move_random(&mut self, max_speed: usize, max_x: usize, max_y: usize) {
-        let mut max_speed: isize = max_speed as isize;
-        if let PersonState::Recovered(is_dead) = self.state {
-            if is_dead {
-                max_speed = 0
+            if chance <= virus.infection_rate {
+                self.state = PersonState::Infectious(virus);
+                self.infected_date = self.age;
             }
         }
-        let x: isize = self.position.x as isize;
-        let y: isize = self.position.y as isize;
-
-        let mut new_x = x + self.rng.gen_range(-max_speed, max_speed + 1);
-        let mut new_y = y + self.rng.gen_range(-max_speed, max_speed + 1);
-        let max_x: isize = max_x as isize;
-        let max_y: isize = max_y as isize;
+    }
+    pub fn update_age(&mut self) {
+        self.age += 1;
+        if let PersonState::Infectious(virus) = &self.state {
+            if self.infected_date + virus.recovery_time < self.age
+            {
+                let chance = self.rng.gen_range(0.0, 1.0);
+                self.state = PersonState::Recovered(chance < virus.mortality_rate);
+            }
+        }
+    }
+    pub fn move_random(&mut self, max_speed: f32, max_x: f32, max_y: f32) {
+        if let PersonState::Recovered(is_dead) = self.state {
+            if is_dead {
+                return ()
+            }
+        }
+        let x = self.position.x;
+        let y = self.position.y;
+        let delta = 0.0000001;
+        // delta to make sure that if max_speed is 0, this wont panic
+        let mut new_x = x + self.rng.gen_range(-max_speed - delta, max_speed + delta);
+        let mut new_y = y + self.rng.gen_range(-max_speed - delta, max_speed + delta);
         if new_x >= max_x {
-            new_x = 0
+            new_x = 0.0;
         };
         if new_y >= max_y {
-            new_y = 0
+            new_y = 0.0;
         }
-        if new_x < 0 {
-            new_x = max_x - 1;
+        if new_x < 0.0 {
+            new_x = max_x - 1.0;
         };
-        if new_y < 0 {
-            new_y = max_y - 1;
+        if new_y < 0.0 {
+            new_y = max_y - 1.0;
         }
         self.position.x = new_x;
         self.position.y = new_y;
     }
-    fn min_diff(x1: isize, x2: isize, width: isize) -> isize {
+    fn min_diff(x1: f32, x2: f32, width: f32) -> f32 {
         let diff_1 = (x1 - x2).abs();
         let diff_2 = (diff_1 - width).abs();
-        std::cmp::min(diff_1, diff_2)
+        diff_1.min(diff_2)
     }
     // We need the world to know its size because the world is circular
-    pub fn sqr_distance(&self, other: &Person, world_width: usize, world_height: usize) -> isize {
-        let diff_x = Person::min_diff(self.position.x, other.position.x, world_width as isize);
-        let diff_y = Person::min_diff(self.position.y, other.position.y, world_height as isize);
+    pub fn sqr_distance(&self, other: &Person, world_width: f32, world_height: f32) -> f32 {
+        let diff_x = Person::min_diff(self.position.x, other.position.x, world_width);
+        let diff_y = Person::min_diff(self.position.y, other.position.y, world_height);
         diff_x * diff_x + diff_y * diff_y
     }
 }
@@ -116,7 +118,7 @@ mod tests {
     #[test]
     fn dead_people_dont_move() {
         let rng = rand::thread_rng();
-        let position = Location { x: 10, y: 10 };
+        let position = Location { x: 10.0, y: 10.0 };
         let mut person = Person {
             id: 1,
             state: PersonState::Recovered(true),
@@ -127,9 +129,9 @@ mod tests {
             rng,
         };
         for _ in 0..10 {
-            person.move_random(10, 100, 100);
-            assert_eq!(person.position.x, 10);
-            assert_eq!(person.position.y, 10);
+            person.move_random(10.0, 100.0, 100.0);
+            assert_eq!(person.position.x, 10.0);
+            assert_eq!(person.position.y, 10.0);
         }
     }
 }
