@@ -1,6 +1,7 @@
 use super::person::{Person, PersonState};
 use super::virus::Virus;
 use std::iter::Flatten;
+use std::sync::Arc;
 use std::slice::{Iter, IterMut};
 
 pub struct Population {
@@ -50,7 +51,6 @@ impl Population {
       for col in 0..self.people[row].len() {
         let mut index = 0;
         while index < self.people[row][col].len() {
-          println!("index {} {}", index, self.people[row][col].len());
           let mut removed_item = false;
           if self.people[row][col][index].age == current_age {
             self.people[row][col][index].move_random(move_speed, world_width, world_height);
@@ -75,19 +75,18 @@ impl Population {
   fn people_from(&self, box_x: isize, box_y: isize) -> Iter<Person> {
     let mut box_x = box_x;
     let mut box_y = box_y;
-    if box_x < 0 {
-      box_x = self.people.len() as isize;
+    while box_x < 0 {
+      box_x += self.people.len() as isize;
     }
-    if box_x == self.people.len() as isize {
-      box_x = 0;
+    if box_x > (self.people.len() - 1) as isize {
+      box_x -= self.people.len() as isize;
     }
-    if box_y < 0 {
-      box_y = self.people[0].len() as isize;
+    while box_y < 0 {
+      box_y += self.people[0].len() as isize;
     }
-    if box_y == self.people[0].len() as isize {
-      box_y = 0;
+    if box_y > (self.people[0].len() - 1) as isize {
+      box_y -= self.people[0].len() as isize;
     }
-    println!("Get people from {} {}", box_x, box_y);
     self.people[box_x as usize][box_y as usize].iter()
   }
   fn infections_for_people_within_box(&self, box_x: usize, box_y: usize) -> Vec<(usize, Virus)> {
@@ -98,12 +97,15 @@ impl Population {
       let box_x = box_x as isize;
       let box_y = box_y as isize;
       if let PersonState::Infectious(virus) = person1.get_state() {
+        println!("------------------ {} {} ({} {})", box_x, box_y, self.people.len(), self.people[0].len());
         for x in box_x-1..box_x+2 {
           for y in box_y-1..box_y+2 {
+            println!("Check for {} {}", x, y);
             for person2 in self.people_from(x, y) {
               let dist = person1.sqr_distance(&person2, world_width, world_height);
               println!("Check distances {} {}", dist, virus.distance * virus.distance);
               if dist < virus.distance * virus.distance {
+                println!("Infect someone {} ({} {})", person2.get_id(), person2.position.x, person2.position.y);
                 infections.push((person2.get_id(), virus.clone()));
               }
             }
@@ -118,9 +120,10 @@ impl Population {
     for _ in self.iter() {
       to_infect.push(None);
     }
+    let population = Arc::new(&self);
     for box_x in 0..self.people.len() {
       for box_y in 0..self.people[0].len() {
-        for infection in self.infections_for_people_within_box(box_x, box_y) {
+        for infection in population.infections_for_people_within_box(box_x, box_y) {
           to_infect[infection.0] = Some(infection.1);
         }
       }
@@ -196,5 +199,21 @@ mod tests {
     }
     assert!(found[0]);
     assert!(found[1]);
+  }
+
+  #[test]
+  fn get_iterator_of_correct_box_with_wrapping() {
+    // We make a grid of 2x2 and put a single person in each
+    let mut population = Population::new(10.0, 10.0, 2, 2);
+    population.add(Person::new(2.0, 2.0, 0));
+    population.add(Person::new(7.0, 2.0, 1));
+    population.add(Person::new(2.0, 7.0, 2));
+    population.add(Person::new(7.0, 7.0, 3));
+    assert_eq!(population.people_from(0, 0).next().unwrap().get_id(), 0);
+    assert_eq!(population.people_from(1, 0).next().unwrap().get_id(), 1);
+    assert_eq!(population.people_from(0, 1).next().unwrap().get_id(), 2);
+    assert_eq!(population.people_from(1, 1).next().unwrap().get_id(), 3);
+    assert_eq!(population.people_from(-1, -1).next().unwrap().get_id(), 3);
+    assert_eq!(population.people_from(3, 3).next().unwrap().get_id(), 3);
   }
 }

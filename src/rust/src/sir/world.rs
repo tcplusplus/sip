@@ -185,22 +185,17 @@ mod tests {
         let virus = Virus::corona();
         let mut world = World::new(1, 100.0, 100.0, virus, PopulationDistribution::Random);
         world.config(15.0);
-        println!("Hier");
         let mut person = world.population.iter().next().unwrap().clone();
         let mut max_move = 0.0;
         for _ in 1..10000 {
-            println!("before update");
             world.update();
-            println!("after update");
             let dist = person.sqr_distance(&world.population.iter().next().unwrap(), 100.0, 100.0);
-            println!("dist {}", dist);
             if dist > max_move {
                 max_move = dist;
             }
             person = world.population.iter().next().unwrap().clone();
         }
         // There is a random factor in here
-        println!("Maximum max distance is {}", max_move);
         assert!(max_move < 450.0 && max_move > 400.0);
     }
 }

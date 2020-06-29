@@ -77,12 +77,14 @@ impl Person {
                 return ()
             }
         }
+        // dont do anything if speed is 0
+        if max_speed < 0.00001 {
+            return ()
+        }
         let x = self.position.x;
         let y = self.position.y;
-        let delta = 0.0000001;
-        // delta to make sure that if max_speed is 0, this wont panic
-        let mut new_x = x + self.rng.gen_range(-max_speed - delta, max_speed + delta);
-        let mut new_y = y + self.rng.gen_range(-max_speed - delta, max_speed + delta);
+        let mut new_x = x + self.rng.gen_range(-max_speed, max_speed);
+        let mut new_y = y + self.rng.gen_range(-max_speed, max_speed);
         if new_x >= max_x {
             new_x = 0.0;
         };
