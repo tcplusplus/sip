@@ -20,49 +20,52 @@ export default Vue.extend({
     fps: 12,
   }),
   mounted() {
-    const virus = Virus.corona();
-    const distribution = PopulationDistribution.Random;
-    this.world = World.new(5000, 1280, 720, virus, distribution);
-    this.data = {
-      labels: [],
-      datasets: [
+    setTimeout(() => {
+      const virus = Virus.corona();
+      const distribution = PopulationDistribution.Random;
+      this.world = World.new(5000, 1280, 720, virus, distribution);
+      this.data = {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            label: 'Susceptible',
+            borderColor: '#0f0',
+            fill: false,
+          },
+          {
+            data: [],
+            label: 'Infected',
+            borderColor: '#f00',
+            fill: false,
+          },
+          {
+            data: [],
+            label: 'Recovered',
+            borderColor: '#00f',
+            fill: false,
+          },
+        ],
+        options: {
+          title: {
+            display: true,
+            text: 'Percentage of population',
+          },
+        },
+      };
+      for (let i = 0; i < 1280; ++i) {
+        this.data.labels.push(this.data.labels.length);
+      }
+      this.chart = new Chart(
+        this.$refs.chart as HTMLCanvasElement,
         {
-          data: [],
-          label: 'Susceptible',
-          borderColor: '#0f0',
-          fill: false,
+          type: 'line',
+          data: this.data,
         },
-        {
-          data: [],
-          label: 'Infected',
-          borderColor: '#f00',
-          fill: false,
-        },
-        {
-          data: [],
-          label: 'Recovered',
-          borderColor: '#00f',
-          fill: false,
-        },
-      ],
-      options: {
-        title: {
-          display: true,
-          text: 'Percentage of population',
-        },
-      },
-    };
-    for (let i = 0; i < 1280; ++i) {
-      this.data.labels.push(this.data.labels.length);
-    }
-    this.chart = new Chart(
-      this.$refs.chart as HTMLCanvasElement,
-      {
-        type: 'line',
-        data: this.data,
-      },
-    );
-    this.update();
+      );
+      this.update();
+    }, 2000);
+
   },
   methods: {
     update() {

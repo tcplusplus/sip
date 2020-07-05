@@ -1,13 +1,24 @@
 use super::person::{Person, PersonState};
 use super::virus::Virus;
 use std::iter::Flatten;
-use std::sync::Arc;
+use std::thread;
+use std::sync::{Arc, Mutex};
 use std::slice::{Iter, IterMut};
 
+extern crate web_sys;
+
+// A macro to provide `println!(..)`-style syntax for `console.log` logging.
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Population {
   people: Vec<Vec<Vec<Person>>>,
   grid_width: f32,
-  grid_height: f32,
+  grid_height: f32
 }
 
 impl Population {
@@ -22,8 +33,16 @@ impl Population {
     Population {
       people,
       grid_width: world_width / num_grid_width as f32,
-      grid_height: world_height / num_grid_height as f32
+      grid_height: world_height / num_grid_height as f32,
     }
+  }
+  #[cfg(target_arch = "wasm32")]
+  fn num_threads(&self) -> u8 {
+    1
+  }
+  #[cfg(not(target_arch = "wasm32"))]
+  fn num_threads(&self) -> u8 {
+    8
   }
   fn get_indexes(&self, x: f32, y: f32) -> (usize, usize) {
     let mut grid_x = (x / self.grid_width).floor() as usize;
@@ -46,7 +65,6 @@ impl Population {
     let world_width = self.grid_width * self.people.len() as f32;
     let world_height = self.grid_width * self.people[0].len() as f32;
     let current_age = self.iter().next().unwrap().age;
-    println!("Current Age is {}", current_age);
     for row in 0..self.people.len() {
       for col in 0..self.people[row].len() {
         let mut index = 0;
@@ -61,7 +79,6 @@ impl Population {
             if new_x != row || new_y != col {
               let person = self.people[row][col].remove(index);
               removed_item = true;
-              println!("move to new box {} {} -> {} {}", row, col, new_x, new_y);
               self.people[new_x][new_y].push(person);
             }
           }
@@ -97,15 +114,11 @@ impl Population {
       let box_x = box_x as isize;
       let box_y = box_y as isize;
       if let PersonState::Infectious(virus) = person1.get_state() {
-        println!("------------------ {} {} ({} {})", box_x, box_y, self.people.len(), self.people[0].len());
         for x in box_x-1..box_x+2 {
           for y in box_y-1..box_y+2 {
-            println!("Check for {} {}", x, y);
             for person2 in self.people_from(x, y) {
               let dist = person1.sqr_distance(&person2, world_width, world_height);
-              println!("Check distances {} {}", dist, virus.distance * virus.distance);
               if dist < virus.distance * virus.distance {
-                println!("Infect someone {} ({} {})", person2.get_id(), person2.position.x, person2.position.y);
                 infections.push((person2.get_id(), virus.clone()));
               }
             }
@@ -115,19 +128,70 @@ impl Population {
     }
     infections
   }
-  pub fn infect_closeby(&mut self) {
+  fn infect_closeby_single_threaded(&mut self) -> Vec<Option<Virus>> {
     let mut to_infect: Vec<Option<Virus>> = Vec::new();
     for _ in self.iter() {
       to_infect.push(None);
     }
-    let population = Arc::new(&self);
     for box_x in 0..self.people.len() {
       for box_y in 0..self.people[0].len() {
-        for infection in population.infections_for_people_within_box(box_x, box_y) {
+        for infection in self.infections_for_people_within_box(box_x, box_y) {
           to_infect[infection.0] = Some(infection.1);
         }
       }
     }
+    to_infect
+  }
+  fn infect_closeby_multithreaded(&mut self) -> Vec<Option<Virus>> {
+    let mut to_infect: Vec<Option<Virus>> = Vec::new();
+    for _ in self.iter() {
+      to_infect.push(None);
+    }
+    let mut boxes_to_test: Vec<(usize, usize)> = Vec::new();
+    for box_x in 0..self.people.len() {
+      for box_y in 0..self.people[0].len() {
+        if self.people[box_x][box_y].len() > 0 {
+          boxes_to_test.push((box_x, box_y));
+        }
+      }
+    }
+    let boxes_to_test: Arc<Mutex<Vec<(usize, usize)>>> = Arc::new(Mutex::new(boxes_to_test));
+    // FIXME -> need to figure out how to remove this clone function
+    let population = Arc::new(self.clone());
+    let to_infect: Arc<Mutex<Vec<Option<Virus>>>> = Arc::new(Mutex::new(to_infect));
+    let mut threads = vec![];
+    for _ in 0..8 {
+      let boxes_to_test = boxes_to_test.clone();
+      let pop = population.clone();
+      let to_infect = to_infect.clone();
+      threads.push(thread::spawn(move || {
+        loop {
+          let box_to_check = {
+            let mut boxes = boxes_to_test.lock().unwrap();
+            if boxes.len() == 0 {
+              break
+            }
+            boxes.pop().unwrap()
+          };
+          for infection in (*pop).infections_for_people_within_box(box_to_check.0, box_to_check.1) {
+            let mut inf = to_infect.lock().unwrap();
+            inf[infection.0] = Some(infection.1);
+          }
+        }
+      }));
+    }
+    for thread in threads {
+      let _res = thread.join();
+    }
+    let to_infect = to_infect.lock().unwrap();
+    to_infect.to_vec()
+  }
+  pub fn infect_closeby(&mut self) {
+    log!("Num threads {}", self.num_threads());
+    let to_infect = match self.num_threads() {
+      nt if nt > 1 => self.infect_closeby_multithreaded(),
+      _ => self.infect_closeby_single_threaded()
+    };
     for person in self.iter_mut() {
       if let Some(virus) = &to_infect[person.get_id()] {
         person.infect(virus.clone())
@@ -216,4 +280,27 @@ mod tests {
     assert_eq!(population.people_from(-1, -1).next().unwrap().get_id(), 3);
     assert_eq!(population.people_from(3, 3).next().unwrap().get_id(), 3);
   }
+
+  #[test]
+  fn infect_closeby_users() {
+      let mut virus = Virus::corona();
+      virus.distance = 5.0;
+      virus.infection_rate = 1.0;
+      let mut population = Population::new(10.0, 10.0, 2, 2);
+      let mut infected_person = Person::new(2.0, 2.0, 0);
+      infected_person.infect(virus);
+      population.add(infected_person);
+      population.add(Person::new(3.0, 2.0, 1));
+      population.add(Person::new(2.0, 3.0, 2));
+      population.add(Person::new(7.0, 7.0, 3));
+      population.infect_closeby();
+      let mut count = 0;
+      for person in population.iter() {
+        if let PersonState::Infectious(_virus) = person.get_state() {
+          count += 1;
+        }
+      }
+      assert_eq!(count, 3);
+  }
 }
+

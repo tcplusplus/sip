@@ -1,5 +1,4 @@
 use super::virus::Virus;
-use rand::rngs::ThreadRng;
 use rand::Rng;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -22,8 +21,7 @@ pub struct Person {
     infected_date: usize,
     pub age: usize,
     pub position: Location,
-    home: Location,
-    rng: ThreadRng,
+    home: Location
 }
 
 impl Person {
@@ -34,7 +32,6 @@ impl Person {
         Person::new(x, y, id)
     }
     pub fn new(x: f32, y: f32, id: usize) -> Person {
-        let rng = rand::thread_rng();
         let position = Location { x, y };
         Person {
             id,
@@ -43,7 +40,6 @@ impl Person {
             infected_date: 0,
             home: position.clone(),
             position,
-            rng,
         }
     }
     pub fn get_state(&self) -> PersonState {
@@ -54,7 +50,8 @@ impl Person {
     }
     pub fn infect(&mut self, virus: Virus) {
         if self.state == PersonState::Susceptible {
-            let chance = self.rng.gen_range(0.0, 1.0);
+            let mut rng = rand::thread_rng();
+            let chance = rng.gen_range(0.0, 1.0);
             if chance <= virus.infection_rate {
                 self.state = PersonState::Infectious(virus);
                 self.infected_date = self.age;
@@ -66,7 +63,8 @@ impl Person {
         if let PersonState::Infectious(virus) = &self.state {
             if self.infected_date + virus.recovery_time < self.age
             {
-                let chance = self.rng.gen_range(0.0, 1.0);
+                let mut rng = rand::thread_rng();
+                let chance = rng.gen_range(0.0, 1.0);
                 self.state = PersonState::Recovered(chance < virus.mortality_rate);
             }
         }
@@ -83,8 +81,9 @@ impl Person {
         }
         let x = self.position.x;
         let y = self.position.y;
-        let mut new_x = x + self.rng.gen_range(-max_speed, max_speed);
-        let mut new_y = y + self.rng.gen_range(-max_speed, max_speed);
+        let mut rng = rand::thread_rng();
+        let mut new_x = x + rng.gen_range(-max_speed, max_speed);
+        let mut new_y = y + rng.gen_range(-max_speed, max_speed);
         if new_x >= max_x {
             new_x = 0.0;
         };
@@ -119,7 +118,6 @@ mod tests {
 
     #[test]
     fn dead_people_dont_move() {
-        let rng = rand::thread_rng();
         let position = Location { x: 10.0, y: 10.0 };
         let mut person = Person {
             id: 1,
@@ -127,8 +125,7 @@ mod tests {
             age: 0,
             infected_date: 0,
             home: position.clone(),
-            position,
-            rng,
+            position
         };
         for _ in 0..10 {
             person.move_random(10.0, 100.0, 100.0);
